@@ -34,6 +34,8 @@ export const AddMedicineDialog: React.FC<AddMedicineDialogProps> = ({
     reorderThreshold: 0,
   });
 
+  const [open, setOpen] = useState(false);
+
   const handleAdd = () => {
     onAddMedicine(newMedicine);
     setNewMedicine({
@@ -44,10 +46,11 @@ export const AddMedicineDialog: React.FC<AddMedicineDialogProps> = ({
       currentStock: 0,
       reorderThreshold: 0,
     });
+    setOpen(false);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-teal-500 hover:bg-teal-600 text-white font-medium">
           + Add New Medicine

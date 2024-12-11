@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,98 +11,87 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-import { Patient, Appointment } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { Patient, AppointmentWithPrescription } from "@/types";
 import PrescriptionWritingForm from "@/components/PrescriptionWritingForm";
 
-// Mock patient data
-const mockPatient: Partial<Patient> = {
-  id: "1",
-  firstName: "John",
-  lastName: "Doe",
-  age: 35,
-  gender: "male",
-  contactNumber: "123-456-7890",
-  address: "123 Main St, Anytown, USA",
-  allergies: ["Penicillin", "Peanuts"],
-  medicalHistory: ["1", "2"], // Appointment IDs
-};
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-type AppointmentWithPrescription = Appointment & {
-  prescription?: {
-    id: string;
-    appointmentId: string;
-    medicines: {
-      medicineId: string;
-      medicineName: string;
-      dosage: string;
-      frequency: string;
-      duration: string;
-    }[];
-    instructions: string;
-  };
-};
-
-// Mock appointment history with ISO string dates
-const mockAppointments: Partial<AppointmentWithPrescription>[] = [
-  {
-    id: "1",
-    patientId: "1",
-    doctorId: "doc1",
-    appointmentDate: new Date("2023-05-15T00:00:00.000Z"),
-    reasonForVisit: "Common Cold",
-    prescriptionId: "presc1",
-    prescription: {
-      id: "presc1",
-      appointmentId: "1",
-      medicines: [
-        {
-          medicineId: "med1",
-          medicineName: "Paracetamol",
-          dosage: "500mg",
-          frequency: "Every 6 hours",
-          duration: "5 days",
-        },
-        {
-          medicineId: "med2",
-          medicineName: "Cough Syrup",
-          dosage: "10ml",
-          frequency: "Every 8 hours",
-          duration: "3 days",
-        },
-      ],
-      instructions: "Take with meals",
-    },
-  },
-  {
-    id: "2",
-    patientId: "1",
-    doctorId: "doc1",
-    appointmentDate: new Date("2023-03-10T00:00:00.000Z"),
-    reasonForVisit: "Sprained Ankle",
-    prescriptionId: "presc2",
-    prescription: {
-      id: "presc2",
-      appointmentId: "2",
-      medicines: [
-        {
-          medicineId: "med3",
-          medicineName: "Ibuprofen",
-          dosage: "400mg",
-          frequency: "Every 8 hours",
-          duration: "7 days",
-        },
-      ],
-      instructions: "Take with food, apply ice pack",
-    },
-  },
-];
-
-export default function PatientHistoryPage() {
-  const [patient] = useState<Partial<Patient>>(mockPatient);
-  const [appointments] =
-    useState<Partial<AppointmentWithPrescription>[]>(mockAppointments);
+export default function PatientHistoryPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [appointments, setAppointments] = useState<
+    AppointmentWithPrescription[]
+  >([]);
   const [isNewVisitDialogOpen, setIsNewVisitDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const fetchPatient = async () => {
+    try {
+      const response = await fetch(`${API_URL}/patients/${params.id}`);
+      if (!response.ok) throw new Error("Failed to fetch patient");
+      const data = await response.json();
+      setPatient(data);
+    } catch (_) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch patient details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/appointments/patient/${params.id}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch appointments");
+      const data = await response.json();
+      setAppointments(data);
+    } catch (_) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch appointments",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchPatient();
+    fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+
+  const handlePrescriptionSubmit = async (prescriptionData: any) => {
+    try {
+      const response = await fetch(`${API_URL}/prescriptions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prescriptionData),
+      });
+
+      if (!response.ok) throw new Error("Failed to create prescription");
+
+      toast({
+        title: "Success",
+        description: "Prescription created successfully",
+      });
+
+      setIsNewVisitDialogOpen(false);
+      fetchAppointments(); // Refresh appointments list
+    } catch (_) {
+      toast({
+        title: "Error",
+        description: "Failed to create prescription",
+        variant: "destructive",
+      });
+    }
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-GB", {
@@ -125,30 +116,30 @@ export default function PatientHistoryPage() {
           <div>
             <p className="mb-2">
               <span className="font-medium text-gray-700">Name:</span>{" "}
-              {patient.firstName} {patient.lastName}
+              {patient?.firstName} {patient?.lastName}
             </p>
             <p className="mb-2">
               <span className="font-medium text-gray-700">Age:</span>{" "}
-              {patient.age}
+              {patient?.age}
             </p>
             <p className="mb-2">
               <span className="font-medium text-gray-700">Gender:</span>{" "}
-              {patient.gender}
+              {patient?.gender}
             </p>
           </div>
           <div>
             <p className="mb-2">
               <span className="font-medium text-gray-700">Contact:</span>{" "}
-              {patient.contactNumber}
+              {patient?.contactNumber}
             </p>
             <p className="mb-2">
               <span className="font-medium text-gray-700">Address:</span>{" "}
-              {patient.address}
+              {patient?.address}
             </p>
             <p className="mb-2">
               <span className="font-medium text-gray-700">Allergies:</span>{" "}
               <span className="text-red-600">
-                {patient.allergies?.join(", ") || ""}
+                {patient?.allergies?.join(", ") || ""}
               </span>
             </p>
           </div>
@@ -171,11 +162,8 @@ export default function PatientHistoryPage() {
               <DialogTitle>Write New Prescription</DialogTitle>
             </DialogHeader>
             <PrescriptionWritingForm
-              patientId={patient.id}
-              onSubmit={(prescriptionData) => {
-                console.log("New prescription:", prescriptionData);
-                setIsNewVisitDialogOpen(false);
-              }}
+              patientId={patient?.id}
+              onSubmit={handlePrescriptionSubmit}
               onCancel={() => setIsNewVisitDialogOpen(false)}
             />
           </DialogContent>
@@ -217,7 +205,7 @@ export default function PatientHistoryPage() {
                         >
                           <p className="text-sm">
                             <span className="font-medium">
-                              {medicine.medicineName}
+                              {medicine.medicineDetails.name}
                             </span>{" "}
                             - {medicine.dosage}, {medicine.frequency} for{" "}
                             {medicine.duration}

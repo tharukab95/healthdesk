@@ -15,6 +15,7 @@ import { Patient, AppointmentWithPrescription } from "@/types";
 import PrescriptionWritingForm from "@/components/PrescriptionWritingForm";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { fetchApi } from "@/lib/api-client";
 
 export default function PatientHistoryPage() {
   const params = useParams();
@@ -27,24 +28,27 @@ export default function PatientHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPatientData = async () => {
+    const fetchPatient = async () => {
       try {
-        const patientResponse = await fetch(`/api/patients/${params.id}`);
-        if (!patientResponse.ok) throw new Error("Failed to fetch patient");
-        const patientData = await patientResponse.json();
-        setPatient(patientData);
-
-        const appointmentsResponse = await fetch(
-          `/api/patients/${params.id}/appointments`
-        );
-        if (!appointmentsResponse.ok)
-          throw new Error("Failed to fetch appointments");
-        const appointmentsData = await appointmentsResponse.json();
-        setAppointments(appointmentsData);
-      } catch (_) {
+        const data = await fetchApi(`/patients/${params.id}`);
+        setPatient(data);
+      } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load patient data",
+          description: "Failed to fetch patient details",
+          variant: "destructive",
+        });
+      }
+    };
+
+    const fetchAppointments = async () => {
+      try {
+        const data = await fetchApi(`/appointments/patient/${params.id}`);
+        setAppointments(data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch appointments",
           variant: "destructive",
         });
       } finally {
@@ -53,7 +57,8 @@ export default function PatientHistoryPage() {
     };
 
     if (params.id) {
-      fetchPatientData();
+      fetchPatient();
+      fetchAppointments();
     }
   }, [params.id, toast]);
 

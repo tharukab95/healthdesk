@@ -15,6 +15,7 @@ import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import { AddMedicineDialog } from "@/components/AddMedicineDialog";
 import { MedicineData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { fetchApi } from "@/lib/api-client";
 
 export default function MedicineInventory() {
   const [medicines, setMedicines] = useState<MedicineData[]>([]);
@@ -22,11 +23,9 @@ export default function MedicineInventory() {
 
   const fetchMedicines = async () => {
     try {
-      const response = await fetch("/api/medicines");
-      if (!response.ok) throw new Error("Failed to fetch medicines");
-      const data = await response.json();
+      const data = await fetchApi('/medicines');
       setMedicines(data);
-    } catch (_) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to fetch medicines",
@@ -37,27 +36,22 @@ export default function MedicineInventory() {
 
   useEffect(() => {
     fetchMedicines();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddMedicine = async (medicine: MedicineData) => {
     try {
-      const response = await fetch("/api/medicines", {
+      const data = await fetchApi('/medicines', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(medicine),
       });
-
-      if (!response.ok) throw new Error("Failed to add medicine");
-
-      const data = await response.json();
       setMedicines([...medicines, data.medicine]);
 
       toast({
         title: "Success",
         description: "Medicine added successfully",
       });
-    } catch (_) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to add medicine",
@@ -68,19 +62,16 @@ export default function MedicineInventory() {
 
   const handleDeleteMedicine = async (id: string) => {
     try {
-      const response = await fetch(`/api/medicines/${id}`, {
+      await fetchApi(`/medicines/${id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) throw new Error("Failed to delete medicine");
-
       setMedicines(medicines.filter((medicine) => medicine.id !== id));
 
       toast({
         title: "Success",
         description: "Medicine deleted successfully",
       });
-    } catch (_) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to delete medicine",
@@ -101,19 +92,11 @@ export default function MedicineInventory() {
           <TableHeader>
             <TableRow className="bg-gray-50/75">
               <TableHead className="font-medium text-gray-700">Name</TableHead>
-              <TableHead className="font-medium text-gray-700">
-                Dosage Form
-              </TableHead>
-              <TableHead className="font-medium text-gray-700">
-                Strength
-              </TableHead>
+              <TableHead className="font-medium text-gray-700">Dosage Form</TableHead>
+              <TableHead className="font-medium text-gray-700">Strength</TableHead>
               <TableHead className="font-medium text-gray-700">Unit</TableHead>
-              <TableHead className="font-medium text-gray-700">
-                Current Stock
-              </TableHead>
-              <TableHead className="font-medium text-gray-700 text-right">
-                Actions
-              </TableHead>
+              <TableHead className="font-medium text-gray-700">Current Stock</TableHead>
+              <TableHead className="font-medium text-gray-700 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

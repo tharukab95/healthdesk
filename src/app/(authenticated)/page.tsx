@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState } from "react";
@@ -16,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Patient } from "@/types";
 import { useRouter } from "next/navigation";
+import { fetchApi } from "@/lib/api-client";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,17 +38,12 @@ export default function Home() {
 
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `/api/patients?query=${encodeURIComponent(term)}`
-      );
-      if (!response.ok) throw new Error("Search failed");
-      const data = await response.json();
+      const data = await fetchApi(`/patients?query=${encodeURIComponent(term)}`);
       setSearchResults(data);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to search patients: ${error.message}`,
+        description: `Failed to search patients: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -56,11 +53,28 @@ export default function Home() {
 
   // Updated registration handler
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleRegister = (formData: any) => {
-    console.log("Registering new patient:", formData);
-    // Here you would typically send the new patient data to your backend
-    alert("Patient registered successfully!");
-    setIsRegistrationOpen(false);
+  const handleRegister = async (formData: any) => {
+    try {
+      const response = await fetchApi('/patients', {
+        method: 'POST',
+        body: JSON.stringify(formData),
+      });
+      
+      setIsRegistrationOpen(false);
+      // Navigate to patient history page after successful registration
+      router.push(`/patient-history/${response.patient._id}`);
+      
+      toast({
+        title: "Success",
+        description: "Patient registered successfully",
+      });
+    } catch (_) {
+      toast({
+        title: "Error",
+        description: "Failed to register patient",
+        variant: "destructive",
+      });
+    }
   };
 
   console.log(searchResults);

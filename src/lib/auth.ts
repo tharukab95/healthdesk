@@ -1,8 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
-import clientPromise from "./mongodb";
 import { DefaultSession } from "next-auth";
+import { fetchApi } from "./api-client";
 
 declare module "next-auth" {
     interface Session {
@@ -24,34 +23,19 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      profile(profile) {
-        return {
-          id: profile.sub,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture,
-          role: "doctor",
-          isActive: true,
-        };
-      },
     }),
   ],
-  adapter: MongoDBAdapter(clientPromise),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
   callbacks: {
     async jwt({ token, user }) {
-      if (!process.env.NEXTAUTH_SECRET) {
-        throw new Error('Missing NEXTAUTH_SECRET environment variable');
-      }
       if (user) {
-        token.role = user.role;
-        token.isActive = user.isActive;
+        // Fetch user data from external API
+        const userData = await fetchApi(`/users/${user.id}`);
+        token.role = userData.role;
+        token.isActive = userData.isActive;
       }
       return token;
     },

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-
 import {
   Select,
   SelectContent,
@@ -13,20 +12,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 
 interface PatientRegistrationFormProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onSubmit: (data: any) => void;
+  onSubmit: (data: {
+    firstName: string;
+    lastName: string;
+    contactNumber: string;
+    age: string;
+    gender: string;
+    address: string;
+  }) => void;
   onCancel?: () => void;
+  isLoading?: boolean;
 }
 
 export default function PatientRegistrationForm({
   onSubmit,
   onCancel,
+  isLoading = false,
 }: PatientRegistrationFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -53,42 +57,9 @@ export default function PatientRegistrationForm({
     }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/patients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to register patient");
-      }
-
-      const data = await response.json();
-      toast({
-        title: "Success",
-        description: "Patient registered successfully",
-        duration: 3000,
-      });
-      onSubmit(data.patient);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to register patient. Please try again.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-        duration: 3000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    onSubmit(formData);
   };
 
   return (
