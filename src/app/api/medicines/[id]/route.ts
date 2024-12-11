@@ -8,11 +8,11 @@ import { toClientModel } from "@/lib/utils";
 // GET single medicine
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     await connectDB();
-    const medicine = await MedicineModel.findById(params.id).lean();
+    const medicine = await MedicineModel.findById(context.params.id).lean();
     if (!medicine) {
       return NextResponse.json(
         { message: "Medicine not found" },
@@ -31,13 +31,13 @@ export async function GET(
 // PUT update medicine
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     await connectDB();
     const body = await req.json();
     const medicine = await MedicineModel.findByIdAndUpdate(
-      params.id,
+      context.params.id,
       { $set: body },
       { new: true }
     ).lean();
@@ -61,11 +61,11 @@ export async function PUT(
 // DELETE medicine
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     await connectDB();
-    const medicine = await MedicineModel.findByIdAndDelete(params.id);
+    const medicine = await MedicineModel.findByIdAndDelete(context.params.id);
 
     if (!medicine) {
       return NextResponse.json(
