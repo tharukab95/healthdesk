@@ -6,7 +6,7 @@ import { PatientModel } from "@/models";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   try {
     await connectDB();
