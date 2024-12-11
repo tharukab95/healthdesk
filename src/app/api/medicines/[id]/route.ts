@@ -6,11 +6,9 @@ import { MedicineModel } from "@/models";
 import { toClientModel } from "@/lib/utils";
 
 // GET single medicine
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: any }) {
   try {
+    const { id } = params;
     await connectDB();
     const medicine = await MedicineModel.findById(params.id).lean();
     if (!medicine) {
@@ -29,11 +27,9 @@ export async function GET(
 }
 
 // PUT update medicine
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: { params: any }) {
   try {
+    const { id } = params;
     await connectDB();
     const body = await request.json();
     const medicine = await MedicineModel.findByIdAndUpdate(
@@ -61,11 +57,12 @@ export async function PUT(
 // DELETE medicine
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: any }
 ) {
   try {
+    const { id } = params;
     await connectDB();
-    const medicine = await MedicineModel.findByIdAndDelete(params.id);
+    const medicine = await MedicineModel.findByIdAndDelete(id);
 
     if (!medicine) {
       return NextResponse.json(
