@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ServerApiVersion } from "mongodb";
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
@@ -27,15 +27,24 @@ if (process.env.NODE_ENV === "development") {
   clientPromise = client.connect();
 }
 
+let cachedClient: MongoClient | null = null;
 // Add this function for database connection
 export async function connectDB() {
-  try {
-    const client = await clientPromise;
-    return client.db();
-  } catch (error) {
-    console.error("Failed to connect to MongoDB:", error);
-    throw error;
+  if (cachedClient) {
+    return cachedClient;
   }
+
+  const client = new MongoClient(uri, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+  });
+
+  await client.connect();
+  cachedClient = client;
+  return cachedClient;
 }
 
 export default clientPromise;
