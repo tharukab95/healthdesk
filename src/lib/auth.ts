@@ -4,9 +4,6 @@ import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
 import clientPromise from "./mongodb";
 import { DefaultSession } from "next-auth";
 
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error('Missing NEXTAUTH_SECRET environment variable');
-}
 declare module "next-auth" {
     interface Session {
       user: {
@@ -25,8 +22,8 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
       profile(profile) {
         return {
           id: profile.sub,
@@ -49,6 +46,9 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
+      if (!process.env.NEXTAUTH_SECRET) {
+        throw new Error('Missing NEXTAUTH_SECRET environment variable');
+      }
       if (user) {
         token.role = user.role;
         token.isActive = user.isActive;
