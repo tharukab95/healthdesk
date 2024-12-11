@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MedicineData, MedicationData, MedicationWithMedicine } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
+import { fetchApi } from "@/lib/api-client";
 
 interface PrescriptionWritingFormProps {
   patientId: string;
@@ -49,9 +50,7 @@ export default function PrescriptionWritingForm({
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
-        const response = await fetch("/api/medicines");
-        if (!response.ok) throw new Error("Failed to fetch medicines");
-        const data = await response.json();
+        const data = await fetchApi("/medicines");
         setMedicines(data);
       } catch (error) {
         toast({
@@ -95,10 +94,9 @@ export default function PrescriptionWritingForm({
 
     setIsLoading(true);
     try {
-      // Create appointment with all required fields
-      const appointmentResponse = await fetch("/api/appointments", {
+      // Create appointment
+      const appointmentData = await fetchApi("/appointments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           patientId: patientId,
           doctorId: session?.user?.id,
@@ -107,21 +105,15 @@ export default function PrescriptionWritingForm({
         }),
       });
 
-      if (!appointmentResponse.ok) throw new Error("Failed to create appointment");
-      const appointmentData = await appointmentResponse.json();
-
       // Create prescription with new appointment ID
-      const prescriptionResponse = await fetch("/api/prescriptions", {
+      await fetchApi("/prescriptions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appointmentId: appointmentData.appointment.id,
           medicines: prescriptionMedicines,
           instructions,
         }),
       });
-
-      if (!prescriptionResponse.ok) throw new Error("Failed to save prescription");
 
       toast({
         title: "Success",
