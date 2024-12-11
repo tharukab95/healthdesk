@@ -17,11 +17,7 @@ import PrescriptionWritingForm from "@/components/PrescriptionWritingForm";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-export default function PatientHistoryPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function PatientHistoryPage({ params }: { params: any }) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<
     AppointmentWithPrescription[]
