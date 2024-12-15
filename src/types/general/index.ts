@@ -13,7 +13,8 @@ export interface AppointmentData {
   patientId: string;
   doctorId: string;
   appointmentDate: Date;
-  reasonForVisit: string;
+  reasonForVisit?: string;
+  specialNotes?: string;
   prescriptionId?: string;
 }
 

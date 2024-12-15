@@ -44,13 +44,14 @@ export default function PatientHistoryPage() {
     const fetchAppointments = async () => {
       try {
         const data = await fetchApi(`/appointments/patient/${params.id}`);
-        setAppointments(data);
+        setAppointments(Array.isArray(data) ? data : []);
       } catch (error) {
         toast({
           title: "Error",
           description: "Failed to fetch appointments",
           variant: "destructive",
         });
+        setAppointments([]);
       } finally {
         setIsLoading(false);
       }
@@ -151,10 +152,10 @@ export default function PatientHistoryPage() {
               onSubmit={(success) => {
                 if (success) {
                   setIsNewVisitDialogOpen(false);
-                  // Refresh appointments list
-                  fetch(`/api/patients/${params.id}/appointments`)
-                    .then((res) => res.json())
-                    .then((data) => setAppointments(data))
+                  fetchApi(`/appointments/patient/${params.id}`)
+                    .then((data) => {
+                      setAppointments(data);
+                    })
                     .catch(() => {
                       toast({
                         title: "Error",
@@ -186,8 +187,14 @@ export default function PatientHistoryPage() {
                   {formatDate(appointment.appointmentDate?.toString() || "")}
                 </span>
                 <h3 className="font-medium text-gray-800">
-                  {appointment.reasonForVisit}
+                  {appointment.reasonForVisit || "General Checkup"}
                 </h3>
+                {appointment.specialNotes && (
+                  <p className="text-sm text-gray-600 italic mt-1">
+                    <span className="font-medium">Special Notes:</span>{" "}
+                    {appointment.specialNotes}
+                  </p>
+                )}
               </div>
 
               {appointment.prescription && (

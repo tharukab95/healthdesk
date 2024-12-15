@@ -67,6 +67,9 @@ export default function PrescriptionWritingForm({
   const [selectedFrequency, setSelectedFrequency] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const frequencyInputRef = useRef<HTMLInputElement>(null);
+  const durationInputRef = useRef<HTMLInputElement>(null);
+  const addMedicineButtonRef = useRef<HTMLButtonElement>(null);
 
   const frequencies = useMemo(
     () =>
@@ -78,6 +81,9 @@ export default function PrescriptionWritingForm({
       ),
     []
   );
+
+  const [reasonForVisit, setReasonForVisit] = useState("");
+  const [specialNotes, setSpecialNotes] = useState("");
 
   const searchMedicines = async (searchQuery: string) => {
     try {
@@ -150,14 +156,15 @@ export default function PrescriptionWritingForm({
 
     setIsLoading(true);
     try {
-      // Create appointment
+      // Create appointment with additional fields
       const appointmentData = await fetchApi("/appointments", {
         method: "POST",
         body: JSON.stringify({
           patientId: patientId,
           doctorId: session?.user?.id,
           appointmentDate: new Date(),
-          reasonForVisit: "General Checkup",
+          reasonForVisit: reasonForVisit || "General Checkup",
+          specialNotes: specialNotes,
         }),
       });
 
@@ -176,12 +183,13 @@ export default function PrescriptionWritingForm({
         description: "Prescription saved successfully",
       });
       onSubmit(true);
-    } catch (_) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save prescription",
         variant: "destructive",
       });
+      onSubmit(false);
     } finally {
       setIsLoading(false);
     }
@@ -210,6 +218,12 @@ export default function PrescriptionWritingForm({
                   debouncedSearch(value);
                 } else {
                   setSearchResults([]);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && selectedMedicine) {
+                  e.preventDefault();
+                  frequencyInputRef.current?.focus();
                 }
               }}
               placeholder={
@@ -241,6 +255,7 @@ export default function PrescriptionWritingForm({
                         setSearchResults([]);
                         setTimeout(() => {
                           setIsMedicineCommandOpen(false);
+                          frequencyInputRef.current?.focus();
                         }, 0);
                       }}
                     >
@@ -277,10 +292,17 @@ export default function PrescriptionWritingForm({
                 }}
               >
                 <CommandInput
+                  ref={frequencyInputRef}
                   value={frequencyCommandValue}
                   onValueChange={(value) => {
                     setFrequencyCommandValue(value);
                     setIsFrequencyCommandOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && selectedFrequency) {
+                      e.preventDefault();
+                      durationInputRef.current?.focus();
+                    }
                   }}
                   placeholder={
                     selectedFrequency
@@ -311,6 +333,7 @@ export default function PrescriptionWritingForm({
                             }));
                             setTimeout(() => {
                               setIsFrequencyCommandOpen(false);
+                              durationInputRef.current?.focus();
                             }, 0);
                           }}
                         >
@@ -335,6 +358,7 @@ export default function PrescriptionWritingForm({
           <div>
             <Label htmlFor="duration">Duration (Days)</Label>
             <Input
+              ref={durationInputRef}
               id="duration"
               type="number"
               min="1"
@@ -346,11 +370,27 @@ export default function PrescriptionWritingForm({
                   duration: days ? `${days} days` : "",
                 }));
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && medicationDetails.duration) {
+                  e.preventDefault();
+                  addMedicineButtonRef.current?.focus();
+                }
+              }}
               placeholder="e.g., 7"
             />
           </div>
 
-          <Button onClick={handleAddMedicine} className="w-full">
+          <Button 
+            ref={addMedicineButtonRef}
+            onClick={() => {
+              handleAddMedicine();
+              // After adding medicine, focus back to medicine search
+              setTimeout(() => {
+                inputRef.current?.focus();
+              }, 0);
+            }} 
+            className="w-full"
+          >
             Add Medicine
           </Button>
         </>
@@ -373,6 +413,27 @@ export default function PrescriptionWritingForm({
           </ul>
         </div>
       )}
+
+      <div>
+        <Label htmlFor="reasonForVisit">Reason for Visit</Label>
+        <Input
+          id="reasonForVisit"
+          value={reasonForVisit}
+          onChange={(e) => setReasonForVisit(e.target.value)}
+          placeholder="Enter reason for visit (optional)"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="specialNotes">Special Notes</Label>
+        <Textarea
+          id="specialNotes"
+          value={specialNotes}
+          onChange={(e) => setSpecialNotes(e.target.value)}
+          placeholder="Enter any special notes for this appointment (optional)"
+          className="h-20"
+        />
+      </div>
 
       <div>
         <Label htmlFor="instructions">Instructions</Label>
