@@ -149,6 +149,7 @@ export default function PatientHistoryPage() {
             </DialogHeader>
             <PrescriptionWritingForm
               patientId={params.id as string}
+              patientName={`${patient.firstName} ${patient.lastName}`}
               onSubmit={(success) => {
                 if (success) {
                   setIsNewVisitDialogOpen(false);

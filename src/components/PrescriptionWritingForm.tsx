@@ -22,9 +22,11 @@ import {
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import debounce from "lodash/debounce";
+import { BillingModal } from "@/components/BillingModal";
 
 interface PrescriptionWritingFormProps {
   patientId: string;
+  patientName: string;
   onSubmit: (success?: boolean) => void;
   onCancel?: () => void;
 }
@@ -38,6 +40,7 @@ const debouncedFn = debounce((fn: (query: string) => void, query: string) => {
 
 export default function PrescriptionWritingForm({
   patientId,
+  patientName,
   onSubmit,
   onCancel,
 }: PrescriptionWritingFormProps) {
@@ -84,6 +87,11 @@ export default function PrescriptionWritingForm({
 
   const [reasonForVisit, setReasonForVisit] = useState("");
   const [specialNotes, setSpecialNotes] = useState("");
+
+  const [showBillingModal, setShowBillingModal] = useState(false);
+  const [savedAppointmentId, setSavedAppointmentId] = useState<string | null>(
+    null
+  );
 
   const searchMedicines = async (searchQuery: string) => {
     try {
@@ -156,7 +164,6 @@ export default function PrescriptionWritingForm({
 
     setIsLoading(true);
     try {
-      // Create appointment with additional fields
       const appointmentData = await fetchApi("/appointments", {
         method: "POST",
         body: JSON.stringify({
@@ -168,7 +175,6 @@ export default function PrescriptionWritingForm({
         }),
       });
 
-      // Create prescription with new appointment ID
       await fetchApi("/prescriptions", {
         method: "POST",
         body: JSON.stringify({
@@ -178,11 +184,13 @@ export default function PrescriptionWritingForm({
         }),
       });
 
+      setSavedAppointmentId(appointmentData.appointment.id);
+      setShowBillingModal(true);
+
       toast({
         title: "Success",
         description: "Prescription saved successfully",
       });
-      onSubmit(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -221,7 +229,7 @@ export default function PrescriptionWritingForm({
                 }
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && selectedMedicine) {
+                if (e.key === "Enter" && selectedMedicine) {
                   e.preventDefault();
                   frequencyInputRef.current?.focus();
                 }
@@ -299,7 +307,7 @@ export default function PrescriptionWritingForm({
                     setIsFrequencyCommandOpen(true);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && selectedFrequency) {
+                    if (e.key === "Enter" && selectedFrequency) {
                       e.preventDefault();
                       durationInputRef.current?.focus();
                     }
@@ -371,7 +379,7 @@ export default function PrescriptionWritingForm({
                 }));
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && medicationDetails.duration) {
+                if (e.key === "Enter" && medicationDetails.duration) {
                   e.preventDefault();
                   addMedicineButtonRef.current?.focus();
                 }
@@ -380,7 +388,7 @@ export default function PrescriptionWritingForm({
             />
           </div>
 
-          <Button 
+          <Button
             ref={addMedicineButtonRef}
             onClick={() => {
               handleAddMedicine();
@@ -388,7 +396,7 @@ export default function PrescriptionWritingForm({
               setTimeout(() => {
                 inputRef.current?.focus();
               }, 0);
-            }} 
+            }}
             className="w-full"
           >
             Add Medicine
@@ -458,6 +466,20 @@ export default function PrescriptionWritingForm({
           {isLoading ? "Saving..." : "Save Prescription"}
         </Button>
       </div>
+
+      {showBillingModal && (
+        <BillingModal
+          isOpen={showBillingModal}
+          onClose={() => {
+            setShowBillingModal(false);
+            onSubmit(true);
+          }}
+          appointmentId={savedAppointmentId!}
+          patientId={patientId}
+          patientName={patientName}
+          appointmentDate={new Date()}
+        />
+      )}
     </div>
   );
 }
