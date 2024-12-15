@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     // Create the prescription
     const prescription = await PrescriptionModel.create({
       appointmentId: body.appointmentId,
-      medicines: body.medicines,
+      prescribedMedicines: body.medicines,
       instructions: body.instructions,
     });
 

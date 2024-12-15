@@ -32,16 +32,15 @@ export interface Appointment extends MongoDocument {
   prescriptionId?: string;
 }
 
-export interface Medication {
+export interface PrescribedMedicine {
   medicineId: string;
-  dosage: string;
   frequency: string;
   duration: string;
 }
 
 export interface Prescription extends MongoDocument {
   appointmentId: string;
-  medicines: Medication[];
+  prescribedMedicines: PrescribedMedicine[];
   instructions: string;
 }
 

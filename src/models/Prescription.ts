@@ -1,6 +1,6 @@
 import { Schema, model, models } from "mongoose";
 import { Prescription } from "@/types";
-import { medicationSchema } from "./schemas/Medication";
+import { prescribedMedicineSchema } from "./schemas/PrescribedMedicine";
 
 const prescriptionSchema = new Schema({
   appointmentId: {
@@ -8,7 +8,7 @@ const prescriptionSchema = new Schema({
     ref: "Appointment",
     required: true,
   },
-  medicines: [medicationSchema],
+  prescribedMedicines: [prescribedMedicineSchema],
   instructions: { type: String, required: true },
 });
 

@@ -1,0 +1,16 @@
+export const FrequencyAbbreviation = {
+  OD: "Once daily (q.d.)",
+  BD: "Twice daily (b.i.d.)",
+  TDS: "Three times daily (t.i.d.)",
+  QDS: "Four times daily (q.i.d.)",
+  Q1H: "Every hour (q.h.)",
+  Q4H: "Every 4 hours (q4h)",
+  Q6H: "Every 6 hours (q6h)",
+  Q8H: "Every 8 hours (q8h)",
+  Q12H: "Every 12 hours (q12h)",
+  AM: "Every morning (q.a.m.)",
+  PM: "Every evening (q.p.m.)",
+  HS: "At bedtime (h.s.)",
+  PRN: "As needed (p.r.n.)",
+  STAT: "Immediately (stat.)",
+} as const;

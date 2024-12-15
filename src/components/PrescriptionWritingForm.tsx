@@ -1,23 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { MedicineData, MedicationData, MedicationWithMedicine } from "@/types";
+import { MedicineData, PrescribedMedicineWithDetails } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
 import { fetchApi } from "@/lib/api-client";
+import { FrequencyAbbreviation } from "@/constants/prescriptionOptions";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import debounce from "lodash/debounce";
 
 interface PrescriptionWritingFormProps {
   patientId: string;
@@ -25,65 +29,117 @@ interface PrescriptionWritingFormProps {
   onCancel?: () => void;
 }
 
+// Outside component
+const debouncedFn = debounce((fn: (query: string) => void, query: string) => {
+  if (query.trim()) {
+    fn(query);
+  }
+}, 300);
+
 export default function PrescriptionWritingForm({
   patientId,
   onSubmit,
   onCancel,
 }: PrescriptionWritingFormProps) {
-  const [medicines, setMedicines] = useState<MedicineData[]>([]);
+  const [searchResults, setSearchResults] = useState<MedicineData[]>([]);
   const [selectedMedicine, setSelectedMedicine] = useState<MedicineData | null>(
     null
   );
-  const [prescriptionMedicines, setPrescriptionMedicines] = useState<
-    MedicationWithMedicine[]
+  const [prescribedMedicines, setPrescribedMedicines] = useState<
+    PrescribedMedicineWithDetails[]
   >([]);
   const [instructions, setInstructions] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [medicationDetails, setMedicationDetails] = useState({
-    dosage: "",
     frequency: "",
     duration: "",
   });
   const { data: session } = useSession();
 
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const data = await fetchApi("/medicines");
-        setMedicines(data);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch medicines",
-          variant: "destructive",
-        });
+  // Medicine command state
+  const [isMedicineCommandOpen, setIsMedicineCommandOpen] = useState(false);
+  const [medicineCommandValue, setMedicineCommandValue] = useState("");
+
+  // Frequency command state
+  const [isFrequencyCommandOpen, setIsFrequencyCommandOpen] = useState(false);
+  const [frequencyCommandValue, setFrequencyCommandValue] = useState("");
+  const [selectedFrequency, setSelectedFrequency] = useState("");
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const frequencies = useMemo(
+    () =>
+      Object.entries(FrequencyAbbreviation).map(
+        ([value, label]: [string, string]) => ({
+          value,
+          label,
+        })
+      ),
+    []
+  );
+
+  const searchMedicines = async (searchQuery: string) => {
+    try {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
       }
-    };
 
-    fetchMedicines();
-  }, [toast]);
+      const data = await fetchApi(
+        `/medicines/search?query=${encodeURIComponent(searchQuery)}`
+      );
+      const medicines = Array.isArray(data.medicines) ? data.medicines : [];
+      console.log("Setting search results:", medicines); // Debug log
+      setSearchResults(medicines);
+    } catch (error) {
+      console.error("Error searching medicines:", error);
+      setSearchResults([]);
+      toast({
+        title: "Error",
+        description: "Failed to search medicines",
+        variant: "destructive",
+      });
+    }
+  };
 
-  const handleMedicineChange = (medicineId: string) => {
-    const medicine = medicines.find((med) => med.id === medicineId);
+  const debouncedSearch = (query: string) => {
+    debouncedFn(searchMedicines, query);
+  };
+
+  const handleMedicineChange = (medicineId: string | undefined) => {
+    if (!medicineId) return;
+    const medicine = searchResults.find((med) => med.id === medicineId);
     setSelectedMedicine(medicine || null);
   };
 
   const handleAddMedicine = () => {
-    if (!selectedMedicine) return;
+    if (
+      !selectedMedicine ||
+      !medicationDetails.frequency ||
+      !medicationDetails.duration
+    ) {
+      toast({
+        title: "Error",
+        description: "Please fill in all medicine details",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const medicationData: MedicationWithMedicine = {
+    const medicationData: PrescribedMedicineWithDetails = {
       medicineId: selectedMedicine.id!,
       medicine: selectedMedicine,
       ...medicationDetails,
     };
-    setPrescriptionMedicines((prev) => [...prev, medicationData]);
+    setPrescribedMedicines((prev) => [...prev, medicationData]);
     setSelectedMedicine(null);
-    setMedicationDetails({ dosage: "", frequency: "", duration: "" });
+    setMedicationDetails({ frequency: "", duration: "" });
+    setSelectedFrequency("");
   };
 
   const handleSubmit = async () => {
-    if (prescriptionMedicines.length === 0) {
+    if (prescribedMedicines.length === 0) {
       toast({
         title: "Error",
         description: "Please add at least one medicine",
@@ -110,7 +166,7 @@ export default function PrescriptionWritingForm({
         method: "POST",
         body: JSON.stringify({
           appointmentId: appointmentData.appointment.id,
-          medicines: prescriptionMedicines,
+          prescribedMedicines: prescribedMedicines,
           instructions,
         }),
       });
@@ -120,7 +176,7 @@ export default function PrescriptionWritingForm({
         description: "Prescription saved successfully",
       });
       onSubmit(true);
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to save prescription",
@@ -135,64 +191,162 @@ export default function PrescriptionWritingForm({
     <div className="space-y-4">
       <div>
         <Label htmlFor="medicine">Select Medicine</Label>
-        <Select onValueChange={handleMedicineChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Choose a medicine" />
-          </SelectTrigger>
-          <SelectContent>
-            {medicines.map((med) => (
-              <SelectItem key={med.id} value={med.id || ""}>
-                {med.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="relative">
+          <Command
+            className="rounded-lg border shadow-md bg-white"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setIsMedicineCommandOpen(false);
+                inputRef.current?.blur();
+              }
+            }}
+          >
+            <CommandInput
+              ref={inputRef}
+              value={medicineCommandValue}
+              onValueChange={(value) => {
+                setMedicineCommandValue(value);
+                if (value.trim()) {
+                  debouncedSearch(value);
+                } else {
+                  setSearchResults([]);
+                }
+              }}
+              placeholder={
+                selectedMedicine
+                  ? `${selectedMedicine.name} - ${selectedMedicine.dosageForm} (${selectedMedicine.strength})`
+                  : "Search medicine..."
+              }
+              className="h-9"
+              onFocus={() => setIsMedicineCommandOpen(true)}
+              onBlur={() => {
+                setTimeout(() => setIsMedicineCommandOpen(false), 200);
+              }}
+            />
+            {isMedicineCommandOpen && (
+              <CommandList>
+                <CommandEmpty>
+                  {medicineCommandValue.trim()
+                    ? "No medicines found."
+                    : "Start typing to search medicines..."}
+                </CommandEmpty>
+                <CommandGroup>
+                  {searchResults.map((med) => (
+                    <CommandItem
+                      key={med.id}
+                      value={`${med.name} - ${med.dosageForm} (${med.strength})`}
+                      onSelect={() => {
+                        handleMedicineChange(med.id);
+                        setMedicineCommandValue("");
+                        setSearchResults([]);
+                        setTimeout(() => {
+                          setIsMedicineCommandOpen(false);
+                        }, 0);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedMedicine?.id === med.id
+                            ? "opacity-100"
+                            : "opacity-0"
+                        )}
+                      />
+                      {med.name} - {med.dosageForm} ({med.strength})
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            )}
+          </Command>
+        </div>
       </div>
 
       {selectedMedicine && (
         <>
           <div>
-            <Label htmlFor="dosage">Dosage</Label>
-            <Input
-              id="dosage"
-              value={medicationDetails.dosage}
-              onChange={(e) =>
-                setMedicationDetails((prev) => ({
-                  ...prev,
-                  dosage: e.target.value,
-                }))
-              }
-              placeholder={`Enter dosage (${selectedMedicine.strength})`}
-            />
-          </div>
-
-          <div>
             <Label htmlFor="frequency">Frequency</Label>
-            <Input
-              id="frequency"
-              value={medicationDetails.frequency}
-              onChange={(e) =>
-                setMedicationDetails((prev) => ({
-                  ...prev,
-                  frequency: e.target.value,
-                }))
-              }
-              placeholder="e.g., Every 8 hours"
-            />
+            <div className="relative">
+              <Command
+                className="rounded-lg border shadow-md bg-white"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsFrequencyCommandOpen(false);
+                    inputRef.current?.blur();
+                  }
+                }}
+              >
+                <CommandInput
+                  value={frequencyCommandValue}
+                  onValueChange={(value) => {
+                    setFrequencyCommandValue(value);
+                    setIsFrequencyCommandOpen(true);
+                  }}
+                  placeholder={
+                    selectedFrequency
+                      ? frequencies.find((f) => f.value === selectedFrequency)
+                          ?.label
+                      : "Select frequency..."
+                  }
+                  className="h-9"
+                  onFocus={() => setIsFrequencyCommandOpen(true)}
+                  onBlur={() => {
+                    setTimeout(() => setIsFrequencyCommandOpen(false), 200);
+                  }}
+                />
+                {isFrequencyCommandOpen && (
+                  <CommandList>
+                    <CommandEmpty>No frequency found.</CommandEmpty>
+                    <CommandGroup>
+                      {frequencies.map((frequency) => (
+                        <CommandItem
+                          key={frequency.value}
+                          value={frequency.value}
+                          onSelect={() => {
+                            setSelectedFrequency(frequency.value);
+                            setFrequencyCommandValue("");
+                            setMedicationDetails((prev) => ({
+                              ...prev,
+                              frequency: frequency.value,
+                            }));
+                            setTimeout(() => {
+                              setIsFrequencyCommandOpen(false);
+                            }, 0);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedFrequency === frequency.value
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {frequency.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                )}
+              </Command>
+            </div>
           </div>
 
           <div>
-            <Label htmlFor="duration">Duration</Label>
+            <Label htmlFor="duration">Duration (Days)</Label>
             <Input
               id="duration"
-              value={medicationDetails.duration}
-              onChange={(e) =>
+              type="number"
+              min="1"
+              value={medicationDetails.duration.replace(" days", "")}
+              onChange={(e) => {
+                const days = e.target.value;
                 setMedicationDetails((prev) => ({
                   ...prev,
-                  duration: e.target.value,
-                }))
-              }
-              placeholder="e.g., 7 days"
+                  duration: days ? `${days} days` : "",
+                }));
+              }}
+              placeholder="e.g., 7"
             />
           </div>
 
@@ -202,17 +356,17 @@ export default function PrescriptionWritingForm({
         </>
       )}
 
-      {prescriptionMedicines.length > 0 && (
+      {prescribedMedicines.length > 0 && (
         <div>
           <h3 className="font-semibold mb-2">Added Medicines</h3>
           <ul className="space-y-2">
-            {prescriptionMedicines.map((med, index) => (
+            {prescribedMedicines.map((med, index) => (
               <li key={index} className="p-2 bg-gray-50 rounded">
                 <p>
-                  <strong>{med.medicine.name}</strong>
+                  <strong>{med.medicine.name}</strong> ({med.medicine.strength})
                 </p>
                 <p>
-                  Dosage: {med.dosage}, {med.frequency} for {med.duration}
+                  {med.frequency} for {med.duration}
                 </p>
               </li>
             ))}
@@ -238,9 +392,9 @@ export default function PrescriptionWritingForm({
         )}
         <Button
           onClick={handleSubmit}
-          disabled={prescriptionMedicines.length === 0}
+          disabled={prescribedMedicines.length === 0 || isLoading}
         >
-          Save Prescription
+          {isLoading ? "Saving..." : "Save Prescription"}
         </Button>
       </div>
     </div>

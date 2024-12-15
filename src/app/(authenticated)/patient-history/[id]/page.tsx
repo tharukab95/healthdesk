@@ -197,7 +197,7 @@ export default function PatientHistoryPage() {
                     {appointment.prescription.instructions}
                   </p>
                   <div className="space-y-2">
-                    {appointment.prescription.medicines.map(
+                    {appointment.prescription.prescribedMedicines.map(
                       (medicine, index) => (
                         <div
                           key={index}
@@ -207,8 +207,8 @@ export default function PatientHistoryPage() {
                             <span className="font-medium">
                               {medicine.medicineDetails.name}
                             </span>{" "}
-                            - {medicine.dosage}, {medicine.frequency} for{" "}
-                            {medicine.duration}
+                            - {medicine.medicineDetails.strength},{" "}
+                            {medicine.frequency} for {medicine.duration}
                           </p>
                         </div>
                       )

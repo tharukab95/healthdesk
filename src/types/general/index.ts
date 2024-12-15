@@ -17,37 +17,26 @@ export interface AppointmentData {
   prescriptionId?: string;
 }
 
-export interface MedicineData {
-  id?: string;
-  name: string;
-  dosageForm: string;
-  strength: string;
-  unitMeasurement: string;
-  currentStock: number;
-  reorderThreshold: number;
-}
-
-export interface MedicationData {
+export interface PrescribedMedicineData {
   medicineId: string;
-  dosage: string;
   frequency: string;
   duration: string;
 }
 
-export interface MedicationWithMedicine extends MedicationData {
+export interface PrescribedMedicineWithDetails extends PrescribedMedicineData {
   medicine: MedicineData;
 }
 
 export interface PrescriptionData {
   id?: string;
   appointmentId: string;
-  medicines: MedicationData[];
+  prescribedMedicines: PrescribedMedicineData[];
   instructions: string;
 }
 
 export interface AppointmentWithPrescription extends AppointmentData {
-  prescription?: Omit<PrescriptionData, "medicines"> & {
-    medicines: (MedicationData & {
+  prescription?: Omit<PrescriptionData, "prescribedMedicines"> & {
+    prescribedMedicines: (PrescribedMedicineData & {
       medicineDetails: MedicineData;
     })[];
   };
